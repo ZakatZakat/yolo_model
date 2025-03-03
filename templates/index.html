@@ -1,0 +1,975 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF Image Extractor</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            color: #333;
+        }
+        
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .upload-container {
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            padding: 30px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+        
+        .upload-form {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        .file-input-container {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .options-container {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-top: 10px;
+            padding-top: 15px;
+            border-top: 1px solid #e0e0e0;
+        }
+        
+        .option-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .option-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+            margin-left: 8px;
+        }
+        
+        .badge-info {
+            background-color: #3498db;
+            color: white;
+        }
+        
+        .badge-warning {
+            background-color: #f39c12;
+            color: white;
+        }
+        
+        input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+        }
+        
+        input[type="range"] {
+            width: 100%;
+            max-width: 300px;
+        }
+        
+        .confidence-value {
+            min-width: 40px;
+            text-align: center;
+        }
+        
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s;
+        }
+        
+        button:hover {
+            background-color: #2980b9;
+        }
+        
+        button:disabled {
+            background-color: #95a5a6;
+            cursor: not-allowed;
+        }
+        
+        #loading {
+            display: none;
+            text-align: center;
+            margin: 20px 0;
+        }
+        
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border-left-color: #3498db;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 20px;
+            margin-top: 30px;
+        }
+        
+        .image-card {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            cursor: pointer;
+            transition: transform 0.3s ease;
+            position: relative;
+        }
+        
+        .image-card:hover {
+            transform: scale(1.03);
+        }
+        
+        .image-card img {
+            width: 100%;
+            height: 200px;
+            object-fit: contain;
+            background-color: #f5f5f5;
+        }
+        
+        .image-info {
+            padding: 10px;
+            background-color: #f8f9fa;
+        }
+        
+        .confidence-indicator {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+        
+        .no-images {
+            text-align: center;
+            color: #7f8c8d;
+            padding: 20px;
+            grid-column: 1 / -1;
+        }
+        
+        #resultContainer {
+            display: none;
+        }
+        
+        .info-text {
+            font-size: 14px;
+            color: #7f8c8d;
+            margin-top: 5px;
+        }
+        
+        /* Image Modal/Zoom Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.85);
+            overflow: hidden;
+        }
+        
+        .modal-content {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100%;
+            padding: 20px;
+        }
+        
+        .modal-image-container {
+            position: relative;
+            width: 90%;
+            height: 80%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .modal-image {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+        
+        .modal-caption {
+            color: white;
+            margin-top: 20px;
+            font-size: 16px;
+        }
+        
+        .modal-close {
+            position: absolute;
+            top: 20px;
+            right: 30px;
+            color: white;
+            font-size: 40px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        
+        .modal-zoom-controls {
+            position: absolute;
+            bottom: 20px;
+            display: flex;
+            gap: 10px;
+        }
+        
+        .zoom-btn {
+            background-color: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            font-size: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+        
+        .zoom-btn:hover {
+            background-color: rgba(255, 255, 255, 0.3);
+        }
+        
+        /* Navigation buttons */
+        .nav-btn {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            color: white;
+            font-size: 30px;
+            background-color: rgba(0, 0, 0, 0.5);
+            border: none;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+        
+        .nav-btn:hover {
+            background-color: rgba(0, 0, 0, 0.7);
+        }
+        
+        .prev-btn {
+            left: 20px;
+        }
+        
+        .next-btn {
+            right: 20px;
+        }
+        
+        .method-toggle {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 10px;
+        }
+        
+        .method-btn {
+            background-color: #ecf0f1;
+            color: #2c3e50;
+            padding: 8px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: 500;
+        }
+        
+        .method-btn.active {
+            background-color: #3498db;
+            color: white;
+        }
+        
+        /* Tabs for different tools */
+        .tabs {
+            display: flex;
+            gap: 5px;
+            margin-bottom: 20px;
+        }
+        
+        .tab {
+            padding: 10px 20px;
+            background-color: #ecf0f1;
+            border-radius: 5px 5px 0 0;
+            cursor: pointer;
+            font-weight: 500;
+        }
+        
+        .tab.active {
+            background-color: #3498db;
+            color: white;
+        }
+        
+        .tab-content {
+            display: none;
+            animation: fadeIn 0.3s;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        /* Segmentation gallery */
+        .segmentation-gallery {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-top: 30px;
+        }
+        
+        .segmentation-item {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .segmentation-header {
+            padding: 10px;
+            background-color: #f8f9fa;
+            font-weight: 500;
+            border-bottom: 1px solid #ddd;
+            display: flex;
+            justify-content: space-between;
+        }
+        
+        .segmentation-images {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 5px;
+            padding: 10px;
+        }
+        
+        .segmentation-image-container {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        
+        .segmentation-image-container img {
+            width: 100%;
+            height: auto;
+            object-fit: contain;
+            background-color: #f5f5f5;
+            border: 1px solid #eee;
+        }
+        
+        .segmentation-image-label {
+            text-align: center;
+            font-size: 14px;
+            color: #666;
+        }
+        
+        .badge-count {
+            background-color: #3498db;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <h1>PDF Image Extractor</h1>
+    
+    <!-- Tabs for different tools -->
+    <div class="tabs">
+        <div class="tab active" data-tab="extract">Извлечение графиков</div>
+        <div class="tab" data-tab="segment">Сегментация страниц</div>
+    </div>
+    
+    <div id="extractContent" class="tab-content active">
+        <div class="upload-container">
+            <form id="uploadForm" class="upload-form">
+                <div class="file-input-container">
+                    <label for="pdfFile">Выберите PDF файл:</label>
+                    <input type="file" id="pdfFile" name="pdf_file" accept="application/pdf" required>
+                </div>
+                
+                <div class="options-container">
+                    <div class="option-group">
+                        <label>Метод обнаружения:</label>
+                        <div class="method-toggle">
+                            <div class="method-btn active" data-method="traditional">Традиционный</div>
+                            <div id="yoloMethodBtn" class="method-btn" data-method="yolo">
+                                YOLO (AI)
+                                <span id="yoloStatusBadge" class="badge badge-warning">Проверка...</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div id="yoloOptions" class="option-group" style="display: none;">
+                        <div class="option-row">
+                            <label for="yoloConfidence">Порог уверенности:</label>
+                            <input type="range" id="yoloConfidence" name="yolo_confidence" min="0.1" max="0.9" step="0.05" value="0.25">
+                            <span id="confidenceValue" class="confidence-value">0.25</span>
+                        </div>
+                        <p class="info-text">Более высокий порог даст меньше, но более точных результатов.</p>
+                    </div>
+                </div>
+                
+                <input type="hidden" id="useYolo" name="use_yolo" value="false">
+                
+                <button type="submit" id="submitBtn">Извлечь графики и диаграммы</button>
+            </form>
+        </div>
+        
+        <div id="loading">
+            <div class="spinner"></div>
+            <p id="loadingText">Анализ PDF файла и извлечение графиков, диаграмм и информационных блоков...</p>
+        </div>
+        
+        <div id="resultContainer">
+            <h2>Извлеченные графики и диаграммы (<span id="imageCount">0</span>)</h2>
+            <div id="gallery" class="gallery">
+                <div class="no-images">Не найдено графиков или диаграмм</div>
+            </div>
+        </div>
+    </div>
+    
+    <div id="segmentContent" class="tab-content">
+        <div class="upload-container">
+            <form id="segmentForm" class="upload-form">
+                <div class="file-input-container">
+                    <label for="segmentPdfFile">Выберите PDF файл:</label>
+                    <input type="file" id="segmentPdfFile" name="pdf_file" accept="application/pdf" required>
+                </div>
+                
+                <div class="options-container">
+                    <div class="option-group">
+                        <div class="option-row">
+                            <label>Использовать собственную модель:</label>
+                            <input type="checkbox" id="useCustomModel" name="custom_model">
+                        </div>
+                        <p class="info-text">При включении будет использована модель из runs/detect/train4/weights/best.pt</p>
+                    </div>
+                    
+                    <div class="option-group">
+                        <div class="option-row">
+                            <label for="segmentConfidence">Порог уверенности:</label>
+                            <input type="range" id="segmentConfidence" name="confidence" min="0.1" max="0.9" step="0.05" value="0.25">
+                            <span id="segmentConfidenceValue" class="confidence-value">0.25</span>
+                        </div>
+                        <p class="info-text">Более высокий порог даст меньше, но более точных результатов.</p>
+                    </div>
+                </div>
+                
+                <button type="submit" id="segmentSubmitBtn">Сегментировать PDF</button>
+            </form>
+        </div>
+        
+        <div id="segmentLoading" style="display:none;">
+            <div class="spinner"></div>
+            <p>Обработка PDF файла и применение сегментации...</p>
+        </div>
+        
+        <div id="segmentResultContainer" style="display:none;">
+            <h2>Результаты сегментации страниц (<span id="pagesCount">0</span>)</h2>
+            <div id="segmentationGallery" class="segmentation-gallery">
+                <div class="no-images">Загрузите PDF для сегментации</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Image Modal for Zoom -->
+    <div id="imageModal" class="modal">
+        <span class="modal-close">&times;</span>
+        <div class="modal-content">
+            <div class="modal-image-container">
+                <img id="modalImage" class="modal-image">
+                <button class="nav-btn prev-btn">&lsaquo;</button>
+                <button class="nav-btn next-btn">&rsaquo;</button>
+            </div>
+            <div class="modal-caption" id="modalCaption"></div>
+            <div class="modal-zoom-controls">
+                <button class="zoom-btn" id="zoomOut">-</button>
+                <button class="zoom-btn" id="zoomReset">R</button>
+                <button class="zoom-btn" id="zoomIn">+</button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const uploadForm = document.getElementById('uploadForm');
+            const loadingEl = document.getElementById('loading');
+            const loadingText = document.getElementById('loadingText');
+            const resultContainer = document.getElementById('resultContainer');
+            const gallery = document.getElementById('gallery');
+            const imageCountEl = document.getElementById('imageCount');
+            const useYoloInput = document.getElementById('useYolo');
+            const confidenceSlider = document.getElementById('yoloConfidence');
+            const confidenceValue = document.getElementById('confidenceValue');
+            const yoloOptions = document.getElementById('yoloOptions');
+            const yoloStatusBadge = document.getElementById('yoloStatusBadge');
+            const yoloMethodBtn = document.getElementById('yoloMethodBtn');
+            const methodButtons = document.querySelectorAll('.method-btn');
+            
+            // New variables for segmentation
+            const segmentForm = document.getElementById('segmentForm');
+            const segmentLoading = document.getElementById('segmentLoading');
+            const segmentResultContainer = document.getElementById('segmentResultContainer');
+            const segmentationGallery = document.getElementById('segmentationGallery');
+            const pagesCountEl = document.getElementById('pagesCount');
+            const segmentConfidence = document.getElementById('segmentConfidence');
+            const segmentConfidenceValue = document.getElementById('segmentConfidenceValue');
+            
+            // Check if YOLO is available
+            checkYoloStatus();
+            
+            async function checkYoloStatus() {
+                try {
+                    const response = await fetch('/yolo-status');
+                    const data = await response.json();
+                    
+                    if (data.available) {
+                        yoloStatusBadge.textContent = 'Доступен';
+                        yoloStatusBadge.className = 'badge badge-info';
+                        yoloMethodBtn.classList.remove('disabled');
+                    } else {
+                        yoloStatusBadge.textContent = 'Недоступен';
+                        yoloStatusBadge.className = 'badge badge-warning';
+                    }
+                } catch (error) {
+                    yoloStatusBadge.textContent = 'Ошибка';
+                    yoloStatusBadge.className = 'badge badge-warning';
+                }
+            }
+            
+            // Method selection
+            methodButtons.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    // Skip if this is YOLO and it's disabled
+                    if (this.dataset.method === 'yolo' && this.classList.contains('disabled')) {
+                        return;
+                    }
+                    
+                    // Update active state
+                    methodButtons.forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    
+                    // Show/hide YOLO options
+                    if (this.dataset.method === 'yolo') {
+                        yoloOptions.style.display = 'block';
+                        useYoloInput.value = 'true';
+                        loadingText.textContent = 'Анализ PDF файла с использованием YOLO AI...';
+                    } else {
+                        yoloOptions.style.display = 'none';
+                        useYoloInput.value = 'false';
+                        loadingText.textContent = 'Анализ PDF файла и извлечение графиков, диаграмм и информационных блоков...';
+                    }
+                });
+            });
+            
+            // Confidence slider
+            confidenceSlider.addEventListener('input', function() {
+                confidenceValue.textContent = this.value;
+            });
+            
+            // Modal elements
+            const modal = document.getElementById('imageModal');
+            const modalImg = document.getElementById('modalImage');
+            const modalCaption = document.getElementById('modalCaption');
+            const closeBtn = document.querySelector('.modal-close');
+            const prevBtn = document.querySelector('.prev-btn');
+            const nextBtn = document.querySelector('.next-btn');
+            const zoomInBtn = document.getElementById('zoomIn');
+            const zoomOutBtn = document.getElementById('zoomOut');
+            const zoomResetBtn = document.getElementById('zoomReset');
+            
+            let currentImageIndex = 0;
+            let galleryImages = [];
+            let currentZoom = 1;
+            
+            // Close modal
+            closeBtn.addEventListener('click', () => {
+                modal.style.display = 'none';
+                // Reset zoom when closing
+                currentZoom = 1;
+                modalImg.style.transform = `scale(${currentZoom})`;
+            });
+            
+            // Click outside modal to close
+            window.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    modal.style.display = 'none';
+                    // Reset zoom when closing
+                    currentZoom = 1;
+                    modalImg.style.transform = `scale(${currentZoom})`;
+                }
+            });
+            
+            // Navigation buttons
+            prevBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (galleryImages.length > 0) {
+                    currentImageIndex = (currentImageIndex - 1 + galleryImages.length) % galleryImages.length;
+                    showModalImage(currentImageIndex);
+                }
+            });
+            
+            nextBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (galleryImages.length > 0) {
+                    currentImageIndex = (currentImageIndex + 1) % galleryImages.length;
+                    showModalImage(currentImageIndex);
+                }
+            });
+            
+            // Zoom controls
+            zoomInBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                currentZoom += 0.25;
+                if (currentZoom > 5) currentZoom = 5; // Max zoom
+                modalImg.style.transform = `scale(${currentZoom})`;
+            });
+            
+            zoomOutBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                currentZoom -= 0.25;
+                if (currentZoom < 0.5) currentZoom = 0.5; // Min zoom
+                modalImg.style.transform = `scale(${currentZoom})`;
+            });
+            
+            zoomResetBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                currentZoom = 1;
+                modalImg.style.transform = `scale(${currentZoom})`;
+            });
+            
+            // Keyboard navigation
+            document.addEventListener('keydown', (e) => {
+                if (modal.style.display === 'block') {
+                    if (e.key === 'Escape') {
+                        modal.style.display = 'none';
+                        currentZoom = 1;
+                        modalImg.style.transform = `scale(${currentZoom})`;
+                    } else if (e.key === 'ArrowLeft') {
+                        prevBtn.click();
+                    } else if (e.key === 'ArrowRight') {
+                        nextBtn.click();
+                    } else if (e.key === '+' || e.key === '=') {
+                        zoomInBtn.click();
+                    } else if (e.key === '-') {
+                        zoomOutBtn.click();
+                    } else if (e.key === 'r' || e.key === 'R') {
+                        zoomResetBtn.click();
+                    }
+                }
+            });
+            
+            // Show specific image in modal
+            function showModalImage(index) {
+                if (galleryImages[index]) {
+                    const imgData = galleryImages[index];
+                    modalImg.src = imgData.src;
+                    modalCaption.textContent = imgData.caption;
+                    currentZoom = 1;
+                    modalImg.style.transform = `scale(${currentZoom})`;
+                }
+            }
+            
+            // Form submission for PDF upload
+            uploadForm.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                const formData = new FormData(this);
+                const fileInput = document.getElementById('pdfFile');
+                
+                if (!fileInput.files[0]) {
+                    alert('Пожалуйста, выберите PDF файл');
+                    return;
+                }
+                
+                // Show loading
+                loadingEl.style.display = 'block';
+                resultContainer.style.display = 'none';
+                
+                try {
+                    const response = await fetch('/extract', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error('Ошибка при обработке файла');
+                    }
+                    
+                    const data = await response.json();
+                    
+                    // Update image count
+                    imageCountEl.textContent = data.count;
+                    
+                    // Clear gallery
+                    gallery.innerHTML = '';
+                    galleryImages = [];
+                    
+                    if (data.count === 0) {
+                        gallery.innerHTML = '<div class="no-images">В данном PDF не найдено графиков или диаграмм</div>';
+                    } else {
+                        // Add images to gallery
+                        data.images.forEach((image, index) => {
+                            const imageCard = document.createElement('div');
+                            imageCard.className = 'image-card';
+                            
+                            const img = document.createElement('img');
+                            img.src = `/static/${image.path}`;
+                            img.alt = `Image ${image.image_number} from page ${image.page}`;
+                            
+                            // Add confidence indicator for YOLO detections
+                            if (image.type === 'yolo_chart' && image.confidence !== null) {
+                                const confidenceIndicator = document.createElement('div');
+                                confidenceIndicator.className = 'confidence-indicator';
+                                confidenceIndicator.textContent = `${Math.round(image.confidence * 100)}%`;
+                                imageCard.appendChild(confidenceIndicator);
+                            }
+                            
+                            const info = document.createElement('div');
+                            info.className = 'image-info';
+                            
+                            // Format the type label
+                            let typeLabel = "Изображение";
+                            if (image.type === "chart") {
+                                typeLabel = "График/Диаграмма";
+                            } else if (image.type === "info_block") {
+                                typeLabel = "Информационный блок";
+                            } else if (image.type === "embedded") {
+                                typeLabel = "Изображение";
+                            } else if (image.type === "yolo_chart") {
+                                typeLabel = "YOLO AI Обнаружение";
+                            }
+                            
+                            const caption = `Страница ${image.page} | ${typeLabel}`;
+                            info.textContent = caption;
+                            
+                            // Add to galleryImages array for modal navigation
+                            galleryImages.push({
+                                src: `/static/${image.path}`,
+                                caption: caption,
+                                index: index
+                            });
+                            
+                            // Add click event to open modal
+                            imageCard.addEventListener('click', () => {
+                                currentImageIndex = index;
+                                showModalImage(index);
+                                modal.style.display = 'block';
+                            });
+                            
+                            imageCard.appendChild(img);
+                            imageCard.appendChild(info);
+                            gallery.appendChild(imageCard);
+                        });
+                    }
+                    
+                    // Show results
+                    resultContainer.style.display = 'block';
+                    
+                } catch (error) {
+                    console.error('Error:', error);
+                    alert('Произошла ошибка при обработке файла: ' + error.message);
+                } finally {
+                    // Hide loading
+                    loadingEl.style.display = 'none';
+                }
+            });
+            
+            // Tabs functionality
+            const tabs = document.querySelectorAll('.tab');
+            const tabContents = document.querySelectorAll('.tab-content');
+            
+            tabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    const tabId = tab.dataset.tab;
+                    
+                    // Update active tab
+                    tabs.forEach(t => t.classList.remove('active'));
+                    tab.classList.add('active');
+                    
+                    // Show active content
+                    tabContents.forEach(content => {
+                        content.classList.remove('active');
+                    });
+                    document.getElementById(tabId + 'Content').classList.add('active');
+                });
+            });
+            
+            // Segmentation confidence slider
+            segmentConfidence.addEventListener('input', function() {
+                segmentConfidenceValue.textContent = this.value;
+            });
+            
+            // Segmentation form submission
+            segmentForm.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                const formData = new FormData(this);
+                const fileInput = document.getElementById('segmentPdfFile');
+                
+                if (!fileInput.files[0]) {
+                    alert('Пожалуйста, выберите PDF файл');
+                    return;
+                }
+                
+                // Show loading
+                segmentLoading.style.display = 'block';
+                segmentResultContainer.style.display = 'none';
+                
+                try {
+                    const response = await fetch('/segment-pdf', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error('Ошибка при обработке файла');
+                    }
+                    
+                    const data = await response.json();
+                    
+                    // Update pages count
+                    pagesCountEl.textContent = data.count;
+                    
+                    // Clear gallery
+                    segmentationGallery.innerHTML = '';
+                    
+                    if (data.count === 0) {
+                        segmentationGallery.innerHTML = '<div class="no-images">Не найдено страниц для сегментации</div>';
+                    } else {
+                        // Add pages to gallery
+                        data.pages.forEach((page, index) => {
+                            const segItem = document.createElement('div');
+                            segItem.className = 'segmentation-item';
+                            
+                            const header = document.createElement('div');
+                            header.className = 'segmentation-header';
+                            header.innerHTML = `Страница ${page.page} <span class="badge-count">${page.boxes_count} объект(ов)</span>`;
+                            
+                            const imagesContainer = document.createElement('div');
+                            imagesContainer.className = 'segmentation-images';
+                            
+                            // Original image
+                            const originalContainer = document.createElement('div');
+                            originalContainer.className = 'segmentation-image-container';
+                            
+                            const originalImg = document.createElement('img');
+                            originalImg.src = page.original_page ? `/${page.original_page}` : '/static/placeholder.png';
+                            originalImg.alt = `Page ${page.page} Original`;
+                            
+                            const originalLabel = document.createElement('div');
+                            originalLabel.className = 'segmentation-image-label';
+                            originalLabel.textContent = 'Оригинал';
+                            
+                            originalContainer.appendChild(originalImg);
+                            originalContainer.appendChild(originalLabel);
+                            
+                            // Segmented image
+                            const segmentedContainer = document.createElement('div');
+                            segmentedContainer.className = 'segmentation-image-container';
+                            
+                            const segmentedImg = document.createElement('img');
+                            segmentedImg.src = page.segmented_page ? `/${page.segmented_page}` : '/static/placeholder.png';
+                            segmentedImg.alt = `Page ${page.page} Segmented`;
+                            
+                            const segmentedLabel = document.createElement('div');
+                            segmentedLabel.className = 'segmentation-image-label';
+                            segmentedLabel.textContent = 'Сегментация';
+                            
+                            segmentedContainer.appendChild(segmentedImg);
+                            segmentedContainer.appendChild(segmentedLabel);
+                            
+                            // Add containers to images container
+                            imagesContainer.appendChild(originalContainer);
+                            imagesContainer.appendChild(segmentedContainer);
+                            
+                            // Build the final item
+                            segItem.appendChild(header);
+                            segItem.appendChild(imagesContainer);
+                            
+                            // Add to gallery
+                            segmentationGallery.appendChild(segItem);
+                            
+                            // Make images clickable to open in modal
+                            originalImg.addEventListener('click', () => {
+                                modalImg.src = originalImg.src;
+                                modalCaption.textContent = `Страница ${page.page} - Оригинал`;
+                                modal.style.display = 'block';
+                                currentZoom = 1;
+                                modalImg.style.transform = `scale(${currentZoom})`;
+                            });
+                            
+                            segmentedImg.addEventListener('click', () => {
+                                modalImg.src = segmentedImg.src;
+                                modalCaption.textContent = `Страница ${page.page} - Сегментация (${page.boxes_count} объект(ов))`;
+                                modal.style.display = 'block';
+                                currentZoom = 1;
+                                modalImg.style.transform = `scale(${currentZoom})`;
+                            });
+                        });
+                    }
+                    
+                    // Show results
+                    segmentResultContainer.style.display = 'block';
+                    
+                } catch (error) {
+                    console.error('Error:', error);
+                    alert('Произошла ошибка при сегментации файла: ' + error.message);
+                } finally {
+                    // Hide loading
+                    segmentLoading.style.display = 'none';
+                }
+            });
+        });
+    </script>
+</body>
+</html> 

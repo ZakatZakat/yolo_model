@@ -1,0 +1,14 @@
+.venv
+__pycache__
+*.pyc
+*.pt
+*.png
+*.jpg
+*.jpeg
+*.pdf
+*.json
+*.jsonl
+*.jsonl.gz
+*.jsonl.tar.gz
+*.jsonl.tar.gz.part
+*.jsonl.tar.gz.part.

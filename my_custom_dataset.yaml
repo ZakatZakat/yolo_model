@@ -1,0 +1,5 @@
+train: /Users/askarembulatov/yolo_model/dataset/train
+val: /Users/askarembulatov/yolo_model/dataset/val
+
+nc: 1  # number of classes
+names: ['chart']
