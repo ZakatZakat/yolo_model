@@ -612,9 +612,15 @@ def extract_and_segment_pdf_pages(
                 
                 # Verify the segmented image exists
                 if segmented_page and Path(segmented_page).exists():
-                    logger.info(f"Segmentation successful, saved to {segmented_page}")
+                    segmented_img = cv2.imread(segmented_page)
+                    if segmented_img is not None:
+                        segmented_img_rgb = cv2.cvtColor(segmented_img, cv2.COLOR_BGR2RGB)
+                        cv2.imwrite(segmented_page, segmented_img_rgb)
+                        logger.info(f"Преобразовано в RGB: {segmented_page}")
+                    else:
+                        logger.warning(f"Не удалось загрузить сегментированное изображение: {segmented_page}")
                 else:
-                    logger.warning(f"Segmentation result path not found or invalid: {segmented_page}")
+                    logger.warning(f"Сегментированное изображение не найдено или путь неверен: {segmented_page}")
                 
                 # Log results
                 boxes_count = seg_result.get("boxes_count", 0)
