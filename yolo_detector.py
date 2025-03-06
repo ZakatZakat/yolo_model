@@ -5,6 +5,7 @@ import numpy as np
 from loguru import logger
 import io
 from PIL import Image
+import cv2
 
 # Make YOLO dependencies optional
 try:
@@ -33,7 +34,7 @@ class YOLOChartDetector:
             logger.warning("YOLO detection not available. Install with 'pip install ultralytics'")
             return
             
-        model_path = "runs/detect/train4/weights/best.pt"
+        model_path = "runs/detect/train5/weights/best.pt"
         self.model = YOLO(model_path)
         self.classes = self.model.names
     
@@ -281,7 +282,8 @@ class YOLOChartDetector:
                                 annotator.box_label(b, f"{self.classes.get(c, c)} {box.conf[0]:.2f}")
                         
                         # Save the annotated image
-                        result_img = Image.fromarray(annotator.result())
+                        result_img = Image.fromarray(annotator.result())[:, :, ::-1]
+                        result_img = cv2.cvtColor(result_img, cv2.COLOR_BGR2RGB)
                         result_img.save(save_path)
                         result_path = save_path
                 except Exception as e:
